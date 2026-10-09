@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F5F5F7">
+<title>Torn Companion</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icon-192.png">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Lobster&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css">
+<script>
+  // Pick the saved theme before anything paints, so the splash doesn't flash white in dark mode.
+  try { const t = localStorage.getItem("td-theme") || "light";
+    document.documentElement.dataset.theme = t === "auto" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : t; } catch(e){}
+</script>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+<!-- SPLASH: shown until the first page has its data -->
+<div id="splash" role="status" aria-live="polite">
+  <div class="sp-card">
+    <div class="sp-icon" aria-hidden="true"><i></i></div>
+    <div class="sp-name">Torn Companion</div>
+    <div class="sp-bar" aria-hidden="true"><span id="sp-fill"></span></div>
+    <div class="sp-step" id="sp-step">Opening</div>
+  </div>
+</div>
+
+<!-- SIGN IN -->
+<main id="login" hidden>
+  <div class="login-card glass">
+    <div class="mark" aria-hidden="true"></div>
+    <h1>Torn Companion</h1>
+    <p class="intro">Your timers, plans, notes and faction in one calm place. Sign in with your Torn API key.</p>
+    <form id="login-form">
+      <input type="password" id="login-key" placeholder="Your Torn API key" autocomplete="off" spellcheck="false" aria-label="Torn API key" required>
+      <button class="btn" id="login-btn">Sign in</button>
+      <div class="err-text" id="login-err" role="alert" hidden></div>
+    </form>
+    <details>
+      <summary>How do I get a key?</summary>
+      <ol>
+        <li>In Torn, open <a href="https://www.torn.com/preferences.php#tab=api" target="_blank" rel="noopener">Settings → API Keys</a>.</li>
+        <li>Create a new key with <strong>Limited Access</strong> and name it something like "Companion".</li>
+        <li>Copy the 16-character key and paste it above.</li>
+      </ol>
+    </details>
+    <details open>
+      <summary>What happens with your key</summary>
+      <div class="tos-wrap"><table class="tos">
+          <tr><th>Data storage</th><td>Your profile, bars, money, inventory, timers, events and fights, plus your journal, checklists, reminders, board and player tags, are stored until you delete your account. Market prices are stored for everyone.</td></tr>
+          <tr><th>Data sharing</th><td>Only you can see your data. Anything you add to your faction's space is visible to your faction's members who use this dashboard. Nothing is sold. The person running this server can access its database.</td></tr>
+          <tr><th>Purpose of use</th><td>Your own dashboard: timers and reminders, planning, notes, your faction and trading advice.</td></tr>
+          <tr><th>Key storage &amp; sharing</th><td>Stored encrypted on this server. Used only to fetch your own data while you have the dashboard open, and every 10 minutes in the background only if you turn on notifications. Never shared. Deleted with your account.</td></tr>
+          <tr><th>Key access level</th><td>Limited Access</td></tr>
+          <tr><th>Advisor (optional)</th><td>Only if you add a Gemini key: your game data (never your Torn key) is sent to Google Gemini when you ask for advice.</td></tr>
+        </table></div>
+    </details>
+    <div class="stat" id="login-stat"></div>
+  </div>
+</main>
+
+<!-- APP -->
+<div id="app" hidden>
+<nav class="topbar">
+  <div class="in">
+    <div class="brand"><span class="mark" aria-hidden="true"></span><span>Torn Companion</span></div>
+    <div class="seg" role="tablist" aria-label="Sections">
+      <button role="tab" aria-selected="true" data-tab="today">Today</button>
+      <button role="tab" aria-selected="false" data-tab="notes">Notes</button>
+      <button role="tab" aria-selected="false" data-tab="board">Board</button>
+      <button role="tab" aria-selected="false" data-tab="people">People</button>
+      <button role="tab" aria-selected="false" data-tab="faction">Faction</button>
+      <button role="tab" aria-selected="false" data-tab="market">Market</button>
+    </div>
+    <button class="avatar" id="avatar" aria-label="Settings" title="Settings">?</button>
+  </div>
+</nav>
+<nav class="tabbar" aria-label="Sections">
+  <button aria-selected="true" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span>Today</span></button>
+  <button aria-selected="false" data-tab="notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h10l4 4v14H5z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg><span>Notes</span></button>
+  <button aria-selected="false" data-tab="board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span>Board</span></button>
+  <button aria-selected="false" data-tab="people"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.6c2 .7 3.2 2.5 3.6 5.4"/></svg><span>People</span></button>
+  <button aria-selected="false" data-tab="faction"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/></svg><span>Faction</span></button>
+  <button aria-selected="false" data-tab="market"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Market</span></button>
+</nav>
+<div class="wrap">
+
+  <!-- TODAY -->
+  <section class="tab on" id="today" role="tabpanel">
+    <div class="page-head">
+      <h1 id="hello">Hello</h1>
+      <p id="hello-sub">Getting your latest numbers from Torn…</p>
+      <div class="sync" id="sync" style="width:100%"></div>
+    </div>
+    <div class="today">
+      <div>
+        <div class="hero"><small>Up next</small><div class="say" id="next">…</div><div class="sub" id="next-why"></div></div>
+        <div class="tiles" id="tiles"></div>
+      </div>
+      <aside class="side">
+        <div class="panel glass">
+          <div class="panel-h"><h3>Coming up</h3><button class="btn small" id="add-rem">Remind me</button></div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+        <div class="panel glass" id="today-lists"></div>
+        <div class="panel glass" id="today-notes"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- NOTES -->
+  <section class="tab" id="notes" role="tabpanel">
+    <div class="page-head"><h1>Notes</h1><p>What you learn, what you're working towards and where everything lives.</p></div>
+    <div class="toolrow">
+      <div class="seg" role="group" id="notes-view">
+        <button data-v="journal" aria-selected="true">Journal</button><button data-v="lists" aria-selected="false">Checklists</button><button data-v="links" aria-selected="false">Links</button>
+      </div>
+      <div class="seg scope" role="group" data-scope-for="notes"></div>
+    </div>
+    <div id="notes-journal">
+      <div class="group">
+        <form class="form" id="note-form">
+          <input type="text" id="note-title" placeholder="Title (optional)" maxlength="160">
+          <textarea id="note-body" placeholder="What did you learn or decide today?"></textarea>
+          <div class="row2"><input type="text" id="note-tags" placeholder="Tags, separated by commas: trading, halloween"><button class="btn" id="note-save">Save note</button></div>
+        </form>
+      </div>
+      <div class="toolrow" style="margin-top:18px"><input type="search" id="note-q" placeholder="Search notes" style="max-width:320px"><div class="chips" id="note-tags-filter"></div></div>
+      <div class="notes-grid" id="note-list"></div>
+    </div>
+    <div id="notes-lists" hidden>
+      <div class="group" style="margin-bottom:14px"><form class="form" id="cl-form"><div class="row2">
+        <input type="text" id="cl-title" placeholder="New checklist name" maxlength="120">
+        <select id="cl-template"><option value="">Empty list</option></select>
+        <button class="btn" id="cl-save">Create</button></div></form></div>
+      <div class="lists" id="lists"></div>
+    </div>
+    <div id="notes-links" hidden>
+      <div class="group" style="margin-bottom:14px"><form class="form" id="link-form"><div class="row2">
+        <input type="text" id="link-title" placeholder="Name: Faction Discord" maxlength="120">
+        <input type="text" id="link-url" placeholder="https://…">
+        <input type="text" id="link-cat" placeholder="Group: chat, guides…" maxlength="40" style="max-width:200px">
+        <button class="btn" id="link-save">Add</button></div></form></div>
+      <div id="link-list"></div>
+    </div>
+  </section>
+
+  <!-- BOARD -->
+  <section class="tab" id="board" role="tabpanel">
+    <div class="page-head"><h1>Board</h1><p>Plan in columns, or think out loud on the canvas.</p></div>
+    <div class="toolrow">
+      <div class="seg" role="group" id="board-view">
+        <button data-v="cols" aria-selected="true">Columns</button><button data-v="canvas" aria-selected="false">Canvas</button>
+      </div>
+      <div class="seg scope" role="group" data-scope-for="board"></div>
+      <div class="canvas-tools" id="canvas-tools" hidden>
+        <button class="btn small" id="cv-add">Add note</button>
+        <button class="btn quiet small" id="cv-link" aria-pressed="false">Connect two notes</button>
+        <span class="small-muted" id="cv-hint"></span>
+      </div>
+      <button class="btn quiet small" id="col-add">Add column</button>
+    </div>
+    <div class="kanban" id="kanban"></div>
+    <div class="canvas-wrap glass" id="canvas-wrap" hidden><div class="canvas" id="canvas"><svg id="cv-svg"></svg></div></div>
+  </section>
+
+  <!-- PEOPLE -->
+  <section class="tab" id="people" role="tabpanel">
+    <div class="page-head"><h1>People</h1><p>Tag the players worth remembering. Tags show next to their name everywhere in the dashboard.</p></div>
+    <div class="group" style="margin-top:22px"><form class="form" id="person-form">
+      <div class="row2">
+        <input type="text" id="person-id" placeholder="Player id or profile link" required>
+        <input type="text" id="person-tags" placeholder="Tags: friend, mentor, target, trader, scammer">
+        <div class="seg scope" role="group" data-scope-for="person"></div>
+      </div>
+      <textarea id="person-note" placeholder="Note (optional): how you know them, what they sell, what happened…" style="min-height:60px"></textarea>
+      <div class="row2"><span class="err-text" id="person-err" style="padding:0" hidden></span><button class="btn" id="person-save" style="flex:0 0 auto;margin-left:auto">Save</button></div>
+    </form></div>
+    <div class="toolrow"><input type="search" id="people-q" placeholder="Search people" style="max-width:320px"><div class="chips" id="people-tags"></div></div>
+    <div class="group" id="people-list"></div>
+  </section>
+
+  <!-- FACTION -->
+  <section class="tab" id="faction" role="tabpanel">
+    <div id="faction-body"></div>
+  </section>
+
+  <!-- TRADE -->
+  <section class="tab" id="market" role="tabpanel">
+    <div class="page-head"><h1>Market</h1><p>Prices for every item, your watchlist and the advisor.</p></div>
+    <div class="hero"><small>Advisor</small><div class="say" id="advice-say">Ask the advisor what to buy, sell or hold.</div>
+      <div class="sub" id="advice-sub"></div>
+      <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="advice-btn">Get advice</button>
+      </div>
+    </div>
+
+    <div id="recs-wrap" hidden>
+      <h2>What the advisor suggests</h2>
+      <p class="lede">Each suggestion lists the numbers it's based on. Tap one to see them.</p>
+      <div class="group" id="recs"></div>
+      <div id="watchout"></div>
+    </div>
+
+    <h2>Ask a question</h2>
+    <p class="lede">For example: "Should I sell my Enfield SA-80?" or "What can I buy with $20,000?"</p>
+    <div class="group">
+      <form class="toolbar" id="ask-form">
+        <input type="text" id="ask-q" placeholder="Ask about your items, prices or timing" aria-label="Question">
+        <button class="btn" id="ask-btn">Ask</button>
+      </form>
+      <div class="ai-answer" id="ask-out" hidden></div>
+    </div>
+
+    <h2>What you own</h2>
+    <p class="lede" id="inv-lede">Your items, valued at today's market price.</p>
+    <div class="group" id="inventory"></div>
+
+    <h2 id="hist-h">Price history</h2>
+    <p class="lede" id="log-lede">Prices are logged automatically for every item. Pick one to see how it has moved.</p>
+    <div class="group">
+      <div class="toolbar">
+        <input type="search" id="h-search" placeholder="Find any item" list="h-opts" autocomplete="off" aria-label="Item for price history">
+        <datalist id="h-opts"></datalist>
+        <div class="seg" role="group" aria-label="Time range" id="h-range" style="flex:0 0 auto">
+          <button data-days="7" aria-selected="false">Week</button>
+          <button data-days="30" aria-selected="true">Month</button>
+          <button data-days="90" aria-selected="false">3 months</button>
+          <button data-days="0" aria-selected="false">All</button>
+        </div>
+      </div>
+      <div id="hist-body"><div class="empty">Choose an item to see its price history.</div></div>
+    </div>
+
+    <h2>Your watchlist</h2>
+    <p class="lede">Items you're tracking. Set the months to buy and sell an item, and the dashboard tells you when its window opens.</p>
+    <div class="group">
+      <div class="toolbar">
+        <input type="search" id="w-search" placeholder="Find an item to watch" list="w-opts" autocomplete="off" aria-label="Item name">
+        <datalist id="w-opts"></datalist>
+        <button class="btn" id="w-add">Watch</button>
+      </div>
+      <div class="err-text" id="w-err" hidden></div>
+      <div id="watchlist"></div>
+    </div>
+
+    <h2>Worth watching</h2>
+    <p class="lede" id="cand-lede"></p>
+    <label class="toggle"><input type="checkbox" id="afford"> Only show what I can afford</label>
+    <div class="group" id="candidates"></div>
+  </section>
+
+
+  <footer class="community" id="community"></footer>
+</div>
+</div>
+
+<dialog id="season">
+  <form method="dialog" class="body" id="season-form">
+    <h3 id="season-title">Buy and sell months</h3>
+    <p>Pick the months when this item is usually cheap (buy) and expensive (sell). Torn's price charts on the item page show the pattern.</p>
+    <label class="cap">Buy in</label>
+    <div class="months" id="buy-months"></div>
+    <label class="cap">Sell in</label>
+    <div class="months sell" id="sell-months"></div>
+    <label class="cap" for="s-target">Alert me when it's at or below</label>
+    <input type="number" id="s-target" placeholder="Price in $ (optional)">
+    <label class="cap" for="s-note">Note</label>
+    <textarea id="s-note" rows="2" placeholder="e.g. Christmas-only candy, dips every January"></textarea>
+    <div class="actions">
+      <button class="btn quiet" value="cancel">Cancel</button>
+      <button class="btn" value="save" id="season-save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- detail sheet for tiles -->
+<dialog id="detail" class="sheet" aria-labelledby="detail-title">
+  <div class="body">
+    <div style="display:flex;align-items:center;gap:12px"><h3 id="detail-title" style="flex:1">Details</h3><button class="btn quiet small" onclick="this.closest('dialog').close()">Done</button></div>
+    <div id="detail-body"></div>
+  </div>
+</dialog>
+
+<!-- reminder -->
+<dialog id="rem-dialog" aria-labelledby="rem-h">
+  <form method="dialog" class="body" id="rem-form">
+    <h3 id="rem-h">Remind me</h3>
+    <p>Torn timers like rent, courses and cooldowns are added for you. Use this for anything else.</p>
+    <label class="cap" for="rem-title">What</label>
+    <input type="text" id="rem-title" maxlength="160" placeholder="Renew the Ranch lease" required>
+    <label class="cap">When</label>
+    <div class="quick" id="rem-quick">
+      <button type="button" class="chip" data-s="3600">In 1 hour</button><button type="button" class="chip" data-s="21600">In 6 hours</button>
+      <button type="button" class="chip" data-s="86400">Tomorrow</button><button type="button" class="chip" data-s="259200">In 3 days</button>
+      <button type="button" class="chip" data-s="604800">In a week</button>
+    </div>
+    <input type="datetime-local" id="rem-due" style="margin-top:8px;width:100%" required>
+    <label class="cap" for="rem-repeat">Repeat</label>
+    <div class="row2" style="display:flex;gap:8px">
+      <select id="rem-repeat" style="flex:1"><option value="none">Doesn't repeat</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="every">Every few days…</option></select>
+      <input type="number" id="rem-every" min="1" max="365" placeholder="days" style="width:90px" hidden>
+    </div>
+    <label class="cap" for="rem-note">Note or link (optional)</label>
+    <input type="text" id="rem-note" maxlength="500" placeholder="https://www.torn.com/properties.php">
+    <div id="rem-scope-wrap"><label class="cap">Who sees it</label><div class="seg scope" role="group" data-scope-for="rem"></div></div>
+    <div class="actions"><button class="btn quiet" value="cancel" formnovalidate>Cancel</button><button class="btn" value="save">Save reminder</button></div>
+  </form>
+</dialog>
+
+<!-- board card -->
+<dialog id="card-dialog" aria-labelledby="card-h">
+  <form method="dialog" class="body">
+    <h3 id="card-h">Card</h3>
+    <label class="cap" for="card-title">Title</label>
+    <input type="text" id="card-title" maxlength="200">
+    <label class="cap" for="card-body">Details</label>
+    <textarea id="card-body"></textarea>
+    <label class="cap" for="card-col">Column</label>
+    <select id="card-col" style="width:100%"></select>
+    <label class="cap">Colour</label>
+    <div class="quick" id="card-colors"></div>
+    <div class="actions" style="justify-content:space-between">
+      <button class="btn danger" value="delete" id="card-del" formnovalidate>Delete</button>
+      <span style="display:flex;gap:10px"><button class="btn quiet" value="cancel" formnovalidate>Cancel</button><button class="btn" value="save">Save</button></span>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="settings" class="sheet" aria-labelledby="set-title">
+  <div class="body">
+    <div style="display:flex;align-items:center;gap:12px">
+      <h3 id="set-title" style="flex:1">Settings</h3>
+      <button class="btn quiet small" id="set-close">Done</button>
+    </div>
+    <p id="set-who"></p>
+
+    <h4>Notifications</h4>
+    <div class="group"><div class="field">
+      <div class="inline"><span id="push-state" style="flex:1" class="detail"></span><button class="btn small" id="push-toggle">Turn on</button></div>
+      <div class="detail" id="push-help"></div>
+    </div>
+    <div id="push-kinds"></div></div>
+
+    <h4>Appearance</h4>
+    <div class="group"><div class="field">
+      <div class="seg" id="theme-seg" role="group" aria-label="Theme" style="display:flex">
+        <button data-theme="light" style="flex:1">Light</button><button data-theme="dark" style="flex:1">Dark</button><button data-theme="auto" style="flex:1">Automatic</button>
+      </div>
+    </div></div>
+
+    <h4>Advisor</h4>
+    <div class="group"><div class="field">
+      <label for="set-gemini">Gemini API key</label>
+      <div class="inline"><input type="password" id="set-gemini" autocomplete="off" placeholder="Paste a key from Google AI Studio"><button class="btn small" id="set-gemini-save">Save</button></div>
+      <div class="detail" id="set-gemini-status"></div>
+      <div class="detail">Get one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Gemini keys are prepay: add a little credit under Billing.</div>
+    </div></div>
+
+    <h4>Torn API key</h4>
+    <div class="group"><div class="field">
+      <label for="set-torn">Replace your key</label>
+      <div class="inline"><input type="password" id="set-torn" autocomplete="off" placeholder="New Limited Access key"><button class="btn small" id="set-torn-save">Replace</button></div>
+      <div class="detail" id="set-torn-status"></div>
+    </div></div>
+
+    <div id="owner-box" hidden>
+      <h4>Players on your server</h4>
+      <div class="group" id="owner-players"></div>
+    </div>
+
+    <h4>Your data</h4>
+    <div class="group"><table class="tos">
+          <tr><th>Data storage</th><td>Your profile, bars, money, inventory, timers, events and fights, plus your journal, checklists, reminders, board and player tags, are stored until you delete your account. Market prices are stored for everyone.</td></tr>
+          <tr><th>Data sharing</th><td>Only you can see your data. Anything you add to your faction's space is visible to your faction's members who use this dashboard. Nothing is sold. The person running this server can access its database.</td></tr>
+          <tr><th>Purpose of use</th><td>Your own dashboard: timers and reminders, planning, notes, your faction and trading advice.</td></tr>
+          <tr><th>Key storage &amp; sharing</th><td>Stored encrypted on this server. Used only to fetch your own data while you have the dashboard open, and every 10 minutes in the background only if you turn on notifications. Never shared. Deleted with your account.</td></tr>
+          <tr><th>Key access level</th><td>Limited Access</td></tr>
+          <tr><th>Advisor (optional)</th><td>Only if you add a Gemini key: your game data (never your Torn key) is sent to Google Gemini when you ask for advice.</td></tr>
+        </table></div>
+    <div class="actions" style="justify-content:flex-start">
+      <button class="btn quiet" id="set-logout">Sign out</button>
+      <button class="btn danger" id="set-delete">Delete my data</button>
+    </div>
+    <div class="err-text" id="set-err" role="alert" style="padding:10px 0 0" hidden></div>
+  </div>
+</dialog>
+
+<script src="/static/core.js"></script>
+<script src="/static/today.js"></script>
+<script src="/static/notes.js"></script>
+<script src="/static/board.js"></script>
+<script src="/static/people.js"></script>
+<script src="/static/market.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

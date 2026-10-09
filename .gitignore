@@ -1,0 +1,11 @@
+# secrets and local data - never commit these
+.env
+data/
+*.db
+*.db-wal
+*.db-shm
+secret.key
+# a published market snapshot is fine to commit if you want: remove this line
+seed/*.db
+__pycache__/
+.venv/

@@ -1,0 +1,14 @@
+[Unit]
+Description=Torn Companion (FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=jolen
+WorkingDirectory=/home/jolen/torn-dash
+ExecStart=/home/jolen/torn-dash/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
